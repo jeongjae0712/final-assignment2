@@ -1,0 +1,35 @@
+name: 공모전 크롤링 (위비티)
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 매일 오전 11시 KST (UTC+9 → UTC 02:00)
+  workflow_dispatch:        # 수동 실행 허용
+
+concurrency:
+  group: crawl-contests
+  cancel-in-progress: true  # 이전 실행 중이면 취소하고 새로 시작
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: tsx 설치 (TS 스크립트 실행용)
+        run: npm install -g tsx
+
+      - name: 공모전 크롤링 실행
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: tsx scripts/crawlers/crawl-contests.ts

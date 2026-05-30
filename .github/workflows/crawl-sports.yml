@@ -1,0 +1,42 @@
+name: 스포츠 예약 현황 크롤링
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 매일 오전 9시 KST (UTC+9 → UTC 00:00)
+    - cron: '0 6 * * *'   # 매일 오후 3시 KST (UTC+9 → UTC 06:00)
+  workflow_dispatch:
+
+concurrency:
+  group: crawl-sports
+  cancel-in-progress: true
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: Playwright 브라우저 설치
+        run: npx playwright install chromium --with-deps
+
+      - name: tsx 설치
+        run: npm install -g tsx
+
+      - name: 스포츠 예약 크롤링 실행
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          NEXT_PUBLIC_CBU_RESERVATION_URL: ${{ secrets.NEXT_PUBLIC_CBU_RESERVATION_URL }}
+          SPORTS_USERNAME: ${{ secrets.SPORTS_USERNAME }}
+          SPORTS_PASSWORD: ${{ secrets.SPORTS_PASSWORD }}
+        run: tsx scripts/crawlers/crawl-sports.ts
