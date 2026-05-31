@@ -1,7 +1,9 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import NotificationBell from '@/components/notifications/NotificationBell'
 
 const NAV_ITEMS = [
@@ -15,6 +17,15 @@ const NAV_ITEMS = [
 
 export default function NavBar({ userId }: { userId: string }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  async function handleLogout() {
+    setIsLoggingOut(true)
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
 
   return (
     <>
@@ -32,7 +43,15 @@ export default function NavBar({ userId }: { userId: string }) {
               </Link>
             ))}
           </nav>
-          <NotificationBell userId={userId} />
+          <div className="flex items-center gap-2">
+            <NotificationBell userId={userId} />
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="hidden sm:block text-xs font-medium text-gray-500 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
+              로그아웃
+            </button>
+          </div>
         </div>
       </header>
 
@@ -47,6 +66,13 @@ export default function NavBar({ userId }: { userId: string }) {
             {item.label}
           </Link>
         ))}
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex-1 py-2 flex flex-col items-center gap-0.5 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50">
+          <span className="text-base leading-none">🚪</span>
+          로그아웃
+        </button>
       </nav>
     </>
   )
