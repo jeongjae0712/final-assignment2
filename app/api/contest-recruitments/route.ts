@@ -19,7 +19,20 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ recruitments: data ?? [] })
+
+  const recruitmentIds = (data ?? []).map(r => r.id)
+  let appliedIds = new Set<string>()
+  if (recruitmentIds.length > 0) {
+    const { data: apps } = await supabase
+      .from('contest_applications')
+      .select('recruitment_id')
+      .eq('applicant_id', user.id)
+      .in('recruitment_id', recruitmentIds)
+    appliedIds = new Set((apps ?? []).map(a => a.recruitment_id))
+  }
+
+  const recruitments = (data ?? []).map(r => ({ ...r, user_applied: appliedIds.has(r.id) }))
+  return NextResponse.json({ recruitments })
 }
 
 // POST /api/contest-recruitments — 모집 공고 작성

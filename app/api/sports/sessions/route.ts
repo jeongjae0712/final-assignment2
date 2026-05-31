@@ -24,7 +24,20 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ sessions: data ?? [] })
+
+  const sessionIds = (data ?? []).map(s => s.id)
+  let appliedIds = new Set<string>()
+  if (sessionIds.length > 0) {
+    const { data: apps } = await supabase
+      .from('sport_session_applications')
+      .select('session_id')
+      .eq('applicant_id', user.id)
+      .in('session_id', sessionIds)
+    appliedIds = new Set((apps ?? []).map((a: { session_id: string }) => a.session_id))
+  }
+
+  const sessions = (data ?? []).map(s => ({ ...s, user_applied: appliedIds.has(s.id) }))
+  return NextResponse.json({ sessions })
 }
 
 export async function POST(request: NextRequest) {
@@ -50,7 +63,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '필수 항목이 누락되었습니다' }, { status: 400 })
   }
 
-  // public.users 레코드 보장 (트리거가 실패했을 경우 대비)
   const admin = createAdminClient()
   await admin.from('users').upsert({
     id: user.id,

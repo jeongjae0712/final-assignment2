@@ -18,7 +18,7 @@ export async function POST(
 
   const { data: recruitment } = await supabase
     .from('contest_recruitments')
-    .select('organizer_id, status')
+    .select('organizer_id, status, title')
     .eq('id', recruitmentId)
     .single()
 
@@ -41,6 +41,20 @@ export async function POST(
     if (error.code === '23505') return NextResponse.json({ error: '이미 신청하였습니다' }, { status: 409 })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // 개설자에게 알림
+  const { data: applicant } = await supabase
+    .from('users')
+    .select('nickname')
+    .eq('id', user.id)
+    .single()
+
+  await supabase.from('notifications').insert({
+    user_id: recruitment.organizer_id,
+    type: 'contest_application',
+    content: `${applicant?.nickname ?? '누군가'}님이 "${recruitment.title}" 팀원 모집에 신청했습니다.`,
+    link: '/contests',
+  })
 
   return NextResponse.json({ application: data }, { status: 201 })
 }

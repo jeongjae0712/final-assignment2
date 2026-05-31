@@ -24,8 +24,21 @@ export default function ChatRoom({ roomId, currentUserId, roomName, roomType }: 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  async function handleLeave() {
+    if (!confirm('채팅방을 나가시겠습니까? 나간 후에는 이 채팅방에 다시 입장할 수 없습니다.')) return
+    setIsLeaving(true)
+    const res = await fetch(`/api/chat/rooms/${roomId}`, { method: 'DELETE' })
+    if (res.ok) {
+      router.push('/chat')
+    } else {
+      alert('채팅방 나가기에 실패했습니다.')
+      setIsLeaving(false)
+    }
+  }
 
   const loadMessages = useCallback(async () => {
     const res = await fetch(`/api/chat/rooms/${roomId}/messages`)
@@ -89,6 +102,12 @@ export default function ChatRoom({ roomId, currentUserId, roomName, roomType }: 
           <p className="font-semibold text-gray-900 text-sm truncate">{roomName}</p>
           <p className="text-xs text-gray-400">{typeLabel[roomType] ?? '채팅'}</p>
         </div>
+        <button
+          onClick={handleLeave}
+          disabled={isLeaving}
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-red-300 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">
+          나가기
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gray-50">

@@ -111,6 +111,12 @@ function SessionsTab({ currentUserId }: { currentUserId: string }) {
     if (res.ok) { const j = await res.json(); router.push(`/chat/${j.roomId}`) }
   }
 
+  async function handleCreateTeamChat(sessionId: string) {
+    const res = await fetch(`/api/sports/sessions/${sessionId}/team-chat`, { method: 'POST' })
+    if (res.ok) { const j = await res.json(); router.push(`/chat/${j.roomId}`) }
+    else { alert('팀채팅 생성에 실패했습니다') }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -156,7 +162,12 @@ function SessionsTab({ currentUserId }: { currentUserId: string }) {
                   <p className="text-xs text-gray-500 mt-0.5">최대 {s.max_players}명 · 개설자: {s.organizer.nickname}</p>
                   {s.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{s.description}</p>}
                 </div>
-                {s.organizer_id !== currentUserId && (
+                {s.organizer_id === currentUserId ? (
+                  <button onClick={() => handleCreateTeamChat(s.id)}
+                    className="flex-shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+                    팀채팅
+                  </button>
+                ) : (
                   <button onClick={() => handleContact(s.organizer_id)}
                     className="flex-shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
                     문의하기

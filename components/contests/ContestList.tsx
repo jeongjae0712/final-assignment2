@@ -112,13 +112,14 @@ function ContestRecruitmentModal({
   currentUserId: string
   onClose: () => void
 }) {
-    const router = useRouter()
+  const router = useRouter()
   async function handleContact(partnerId: string) {
     const res = await fetch('/api/chat/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partner_id: partnerId }) })
     if (res.ok) { const j = await res.json(); router.push('/chat/' + j.roomId) }
   }
   const [recruitments, setRecruitments] = useState<(ContestRecruitment & {
     organizer: { id: string; nickname: string; department: string | null }
+    user_applied: boolean
   })[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -134,6 +135,10 @@ function ContestRecruitmentModal({
     }
     setIsLoading(false)
   }, [contest.id])
+
+  function markApplied(recruitmentId: string) {
+    setRecruitments(prev => prev.map(r => r.id === recruitmentId ? { ...r, user_applied: true } : r))
+  }
 
   useEffect(() => { fetchRecruitments() }, [fetchRecruitments])
 
@@ -153,7 +158,7 @@ function ContestRecruitmentModal({
         recruitment={selectedRecruitment}
         currentUserId={currentUserId}
         onClose={() => setSelectedRecruitment(null)}
-        onSuccess={() => setSelectedRecruitment(null)}
+        onSuccess={() => { markApplied(selectedRecruitment.id); setSelectedRecruitment(null) }}
       />
     )
   }
@@ -233,11 +238,19 @@ function ContestRecruitmentModal({
                           className="rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors">
                           문의하기
                         </button>
-                        <button
-                          onClick={() => setSelectedRecruitment(r)}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
-                          신청하기
-                        </button>
+                        {r.user_applied ? (
+                          <button
+                            disabled
+                            className="rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 cursor-not-allowed">
+                            신청완료
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedRecruitment(r)}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
+                            신청하기
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
