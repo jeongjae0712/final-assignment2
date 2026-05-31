@@ -10,9 +10,11 @@ export type NotificationType =
   | 'sport_application'
   | 'sport_accepted'
   | 'sport_rejected'
+  | 'sport_confirmed'
   | 'contest_application'
   | 'contest_accepted'
   | 'contest_rejected'
+  | 'contest_confirmed'
 
 export type ContestField =
   | 'marketing' | 'video' | 'design'
@@ -93,6 +95,7 @@ export interface ContestRecruitment {
   required_fields: string[] | null
   max_members: number
   status: 'open' | 'closed'
+  team_chat_id?: string | null
   created_at: string
   updated_at: string
   user_applied?: boolean

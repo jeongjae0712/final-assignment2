@@ -2,7 +2,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// PATCH /api/sports/sessions/[id]/applicants/[appId] — 신청 수락/거절 (개설자 전용)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; appId: string }> },
@@ -41,52 +40,28 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 개설자 닉네임 조회
+  const admin = createAdminClient()
+  const { data: organizer } = await supabase
+    .from('users')
+    .select('nickname')
+    .eq('id', user.id)
+    .single()
+  const organizerNick = organizer?.nickname ?? '개설자'
+
   if (action === 'accept' && data) {
-    const admin = createAdminClient()
-
-    // 스포츠 팀채팅 생성
-    const roomName = `스포츠 팀채팅: ${session.sport} ${session.session_date}`
-    const { data: room } = await admin
-      .from('chat_rooms')
-      .insert({ type: 'sports_team', name: roomName, ref_id: appId })
-      .select('id')
-      .single()
-
-    if (room) {
-      await admin.from('chat_room_members').insert([
-        { room_id: room.id, user_id: session.organizer_id },
-        { room_id: room.id, user_id: data.applicant_id },
-      ])
-      await admin
-        .from('sport_session_applications')
-        .update({ chat_room_id: room.id })
-        .eq('id', appId)
-
-      // 신청자에게 수락 알림
-      await admin.from('notifications').insert({
-        user_id: data.applicant_id,
-        type: 'sport_accepted',
-        content: `스포츠 세션(${session.sport}) 신청이 수락되었습니다! 팀채팅을 확인하세요.`,
-        link: `/chat/${room.id}`,
-      })
-    }
-
-    // 수락 인원이 max_players에 도달하면 자동 마감
-    const { count: acceptedCount } = await supabase
-      .from('sport_session_applications')
-      .select('*', { count: 'exact', head: true })
-      .eq('session_id', sessionId)
-      .eq('status', 'accepted')
-
-    if ((acceptedCount ?? 0) >= session.max_players - 1) {
-      await supabase.from('sport_sessions').update({ status: 'closed' }).eq('id', sessionId)
-    }
+    // 수락 알림 (팀채팅은 매치 확정 시 생성)
+    await admin.from('notifications').insert({
+      user_id: data.applicant_id,
+      type: 'sport_accepted',
+      content: `${organizerNick}님이 스포츠 세션(${session.sport}) 신청을 수락했습니다! 매치 확정 후 팀채팅이 개설됩니다.`,
+      link: '/matches',
+    })
   } else if (action === 'reject' && data) {
-    // 신청자에게 거절 알림
-    await supabase.from('notifications').insert({
+    await admin.from('notifications').insert({
       user_id: data.applicant_id,
       type: 'sport_rejected',
-      content: `스포츠 세션(${session.sport}) 신청이 거절되었습니다.`,
+      content: `${organizerNick}님이 스포츠 세션(${session.sport}) 신청을 거절했습니다.`,
       link: '/sports',
     })
   }

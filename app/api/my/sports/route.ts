@@ -9,7 +9,7 @@ export async function GET() {
   // 내가 만든 스포츠 매칭 세션
   const { data: mySessions } = await supabase
     .from('sport_sessions')
-    .select('id, sport, title, facility, session_date, start_time, end_time, max_players, description, status, created_at')
+    .select('id, sport, title, facility, session_date, start_time, end_time, max_players, description, status, team_chat_id, created_at')
     .eq('organizer_id', user.id)
     .order('session_date', { ascending: false })
 

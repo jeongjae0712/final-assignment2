@@ -10,7 +10,7 @@ export async function GET() {
   const { data: myRecruitments } = await supabase
     .from('contest_recruitments')
     .select(`
-      id, title, description, status, max_members, created_at, contest_id,
+      id, title, description, status, max_members, team_chat_id, created_at, contest_id,
       contest:contests(id, title, field, end_date),
       applications:contest_applications(id, status)
     `)

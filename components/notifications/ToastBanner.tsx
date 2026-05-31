@@ -32,13 +32,17 @@ const TYPE_LABEL: Record<string, string> = {
   sport_application: '스포츠 신청',
   sport_accepted: '스포츠 수락',
   sport_rejected: '스포츠 거절',
+  sport_confirmed: '매치 확정',
+  contest_confirmed: '팀 확정',
   contest_application: '팀원 신청',
   contest_accepted: '팀원 수락',
   contest_rejected: '팀원 거절',
 }
 
 function getIcon(type: string): string {
+  if (type === 'sport_confirmed') return '🎉'
   if (type.startsWith('sport')) return '⚽'
+  if (type === 'contest_confirmed') return '🎉'
   if (type.startsWith('contest')) return '🏆'
   if (type === 'match_accepted') return '✅'
   if (type === 'match_rejected') return '❌'

@@ -26,7 +26,6 @@ export async function PATCH(
   if (!recruitment || recruitment.organizer_id !== user.id) {
     return NextResponse.json({ error: '권한이 없습니다' }, { status: 403 })
   }
-
   if (recruitment.status === 'closed') {
     return NextResponse.json({ error: '마감된 모집 공고입니다' }, { status: 409 })
   }
@@ -39,51 +38,25 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 개설자 닉네임 조회 + admin 클라이언트 (RLS 우회)
+  const admin = createAdminClient()
+  const { data: organizer } = await supabase
+    .from('users').select('nickname').eq('id', user.id).single()
+  const organizerNick = organizer?.nickname ?? '개설자'
+
   if (action === 'accept' && data) {
-    const admin = createAdminClient()
-
-    // 팀채팅 생성
-    const { data: room } = await admin
-      .from('chat_rooms')
-      .insert({ type: 'contest_team', name: `공모전 팀채팅: ${recruitment.title}`, ref_id: appId })
-      .select('id').single()
-
-    if (room) {
-      await admin.from('chat_room_members').insert([
-        { room_id: room.id, user_id: recruitment.organizer_id },
-        { room_id: room.id, user_id: data.applicant_id },
-      ])
-      await admin.from('contest_applications').update({ chat_room_id: room.id }).eq('id', appId)
-      data.chat_room_id = room.id
-
-      // 신청자에게 수락 알림
-      await admin.from('notifications').insert({
-        user_id: data.applicant_id,
-        type: 'contest_accepted',
-        content: `"${recruitment.title}" 팀원으로 수락되었습니다! 팀채팅을 확인하세요.`,
-        link: `/chat/${room.id}`,
-      })
-    }
-
-    // 수락 인원이 max_members에 도달하면 자동 마감
-    const { count: acceptedCount } = await supabase
-      .from('contest_applications')
-      .select('*', { count: 'exact', head: true })
-      .eq('recruitment_id', recruitmentId)
-      .eq('status', 'accepted')
-
-    if ((acceptedCount ?? 0) >= recruitment.max_members - 1) {
-      await supabase
-        .from('contest_recruitments')
-        .update({ status: 'closed' })
-        .eq('id', recruitmentId)
-    }
+    // 수락 알림 (팀채팅은 팀 확정 시 생성)
+    await admin.from('notifications').insert({
+      user_id: data.applicant_id,
+      type: 'contest_accepted',
+      content: `${organizerNick}님이 "${recruitment.title}" 팀원 신청을 수락했습니다! 팀 확정 후 팀채팅이 개설됩니다.`,
+      link: '/matches',
+    })
   } else if (action === 'reject' && data) {
-    // 신청자에게 거절 알림
-    await supabase.from('notifications').insert({
+    await admin.from('notifications').insert({
       user_id: data.applicant_id,
       type: 'contest_rejected',
-      content: `"${recruitment.title}" 팀원 신청이 거절되었습니다.`,
+      content: `${organizerNick}님이 "${recruitment.title}" 팀원 신청을 거절했습니다.`,
       link: '/contests',
     })
   }
