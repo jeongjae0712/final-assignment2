@@ -18,10 +18,7 @@ export async function PATCH(
   const action: 'accept' | 'reject' | 'cancel' = body.action
 
   const { data: match, error: fetchError } = await supabase
-    .from('matches')
-    .select('*')
-    .eq('id', id)
-    .single()
+    .from('matches').select('*').eq('id', id).single()
 
   if (fetchError || !match) return NextResponse.json({ error: '매칭을 찾을 수 없습니다' }, { status: 404 })
 
@@ -37,22 +34,18 @@ export async function PATCH(
   const newStatus = statusMap[action]
 
   const { data: updated, error: updateError } = await supabase
-    .from('matches')
-    .update({ status: newStatus, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('status', 'pending')
-    .select().single()
+    .from('matches').update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending').select().single()
 
   if (updateError || !updated) return NextResponse.json({ error: '이미 처리된 신청입니다' }, { status: 409 })
 
-  // 수락 시 팀채팅 생성
-  if (action === 'accept') {
-    const admin = createAdminClient()
+  const admin = createAdminClient()
+  const typeLabel = match.type === 'sports' ? '스포츠' : '공모전'
 
-    // 팀채팅 방 생성
-    const chatName = match.type === 'sports' ? '스포츠 팀채팅' : '공모전 팀채팅'
+  if (action === 'accept') {
     const { data: room } = await admin
       .from('chat_rooms')
-      .insert({ type: 'sports_team', name: chatName, ref_id: match.id })
+      .insert({ type: 'sports_team', name: `${typeLabel} 팀채팅`, ref_id: match.id })
       .select('id').single()
 
     if (room) {
@@ -60,18 +53,47 @@ export async function PATCH(
         { room_id: room.id, user_id: match.requester_id },
         { room_id: room.id, user_id: match.receiver_id },
       ])
-      // 채팅방 ID 저장
       await admin.from('matches').update({ chat_room_id: room.id }).eq('id', id)
       updated.chat_room_id = room.id
+
+      // 신청자에게 수락 알림
+      const { data: receiverUser } = await supabase.from('users').select('nickname').eq('id', user.id).single()
+      await admin.from('notifications').insert({
+        user_id: match.requester_id,
+        type: 'match_accepted',
+        content: `${receiverUser?.nickname ?? '누군가'}님이 ${typeLabel} 파트너 신청을 수락했습니다! 팀채팅을 확인하세요.`,
+        link: `/chat/${room.id}`,
+      })
     }
 
     const { data: requesterData } = await supabase.from('users').select('email').eq('id', match.requester_id).single()
-
     return NextResponse.json({
       match: updated,
       chat_room_id: updated.chat_room_id,
       requester_email: requesterData?.email ?? null,
       message: '매칭이 성사되었습니다! 팀채팅에서 대화를 시작하세요.',
+    })
+  }
+
+  if (action === 'reject') {
+    // 신청자에게 거절 알림
+    const { data: receiverUser } = await supabase.from('users').select('nickname').eq('id', user.id).single()
+    await admin.from('notifications').insert({
+      user_id: match.requester_id,
+      type: 'match_rejected',
+      content: `${receiverUser?.nickname ?? '누군가'}님이 ${typeLabel} 파트너 신청을 거절했습니다.`,
+      link: '/matches',
+    })
+  }
+
+  if (action === 'cancel') {
+    // 수신자에게 취소 알림
+    const { data: requesterUser } = await supabase.from('users').select('nickname').eq('id', user.id).single()
+    await admin.from('notifications').insert({
+      user_id: match.receiver_id,
+      type: 'match_cancelled',
+      content: `${requesterUser?.nickname ?? '누군가'}님이 ${typeLabel} 파트너 신청을 취소했습니다.`,
+      link: '/matches',
     })
   }
 
