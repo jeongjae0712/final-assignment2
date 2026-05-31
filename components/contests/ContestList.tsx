@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -538,6 +538,94 @@ function ApplicantsModal({
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── 모집 공고 수정 모달 ─── */
+function EditRecruitmentModal({
+  recruitment, onClose, onSaved, onDelete,
+}: {
+  recruitment: ContestRecruitment & { organizer: { id: string; nickname: string; department: string | null } }
+  onClose: () => void; onSaved: () => void; onDelete: () => void
+}) {
+  const [title, setTitle] = useState(recruitment.title)
+  const [description, setDescription] = useState(recruitment.description ?? '')
+  const [requiredFields, setRequiredFields] = useState<ContestField[]>((recruitment.required_fields as ContestField[]) ?? [])
+  const [maxMembers, setMaxMembers] = useState(recruitment.max_members)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
+
+  function toggleField(f: ContestField) {
+    setRequiredFields(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault(); setError(null)
+    if (!title.trim()) { setError('제목을 입력해주세요'); return }
+    setIsLoading(true)
+    const res = await fetch(`/api/contest-recruitments/${recruitment.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title.trim(), description: description||null, required_fields: requiredFields, max_members: maxMembers }),
+    })
+    const j = await res.json()
+    if (!res.ok) { setError(j.error ?? '수정에 실패했습니다'); setIsLoading(false); return }
+    onSaved()
+  }
+
+  const fieldKeys = Object.keys(CONTEST_FIELD_LABELS) as ContestField[]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-900">모집 공고 수정</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">제목</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} required maxLength={100}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">설명 <span className="text-gray-400">(선택)</span></label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={500} rows={3}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">원하는 분야 <span className="text-gray-400">(선택)</span></label>
+            <div className="flex flex-wrap gap-2">
+              {fieldKeys.map(f => (
+                <button key={f} type="button" onClick={() => toggleField(f)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${requiredFields.includes(f) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
+                  {CONTEST_FIELD_LABELS[f]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">최대 팀원 수: {maxMembers}명</label>
+            <input type="range" min={2} max={10} value={maxMembers} onChange={e => setMaxMembers(Number(e.target.value))} className="w-full accent-blue-600" />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={onDelete}
+              className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+              삭제
+            </button>
+            <button type="submit" disabled={isLoading}
+              className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              {isLoading ? '저장 중...' : '수정 저장'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

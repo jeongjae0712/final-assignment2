@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -19,12 +19,16 @@ export async function PATCH(
 
   const { data: recruitment } = await supabase
     .from('contest_recruitments')
-    .select('organizer_id, contest_id, title')
+    .select('organizer_id, contest_id, title, max_members, status')
     .eq('id', recruitmentId)
     .single()
 
   if (!recruitment || recruitment.organizer_id !== user.id) {
     return NextResponse.json({ error: '권한이 없습니다' }, { status: 403 })
+  }
+
+  if (recruitment.status === 'closed') {
+    return NextResponse.json({ error: '마감된 모집 공고입니다' }, { status: 409 })
   }
 
   const { data, error } = await supabase
@@ -35,9 +39,10 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 수락 시 팀채팅 생성
   if (action === 'accept' && data) {
     const admin = createAdminClient()
+
+    // 팀채팅 생성
     const { data: room } = await admin
       .from('chat_rooms')
       .insert({ type: 'contest_team', name: `공모전 팀채팅: ${recruitment.title}`, ref_id: appId })
@@ -50,6 +55,21 @@ export async function PATCH(
       ])
       await admin.from('contest_applications').update({ chat_room_id: room.id }).eq('id', appId)
       data.chat_room_id = room.id
+    }
+
+    // 수락 인원이 max_members에 도달하면 자동 마감
+    // organizer(1명) + accepted 지원자 수 >= max_members → 마감
+    const { count: acceptedCount } = await supabase
+      .from('contest_applications')
+      .select('*', { count: 'exact', head: true })
+      .eq('recruitment_id', recruitmentId)
+      .eq('status', 'accepted')
+
+    if ((acceptedCount ?? 0) >= recruitment.max_members - 1) {
+      await supabase
+        .from('contest_recruitments')
+        .update({ status: 'closed' })
+        .eq('id', recruitmentId)
     }
   }
 

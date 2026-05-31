@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -271,6 +271,112 @@ function CreateSessionModal({ onClose, onCreated }: { onClose: () => void; onCre
   )
 }
 
+
+/* ─── 매칭 수정 모달 ─── */
+function EditSessionModal({ session, onClose, onSaved, onDelete }: {
+  session: Session; onClose: () => void; onSaved: () => void; onDelete: () => void
+}) {
+  const [sport, setSport] = useState<SportCategory>(session.sport)
+  const [title, setTitle] = useState(session.title ?? '')
+  const [facility, setFacility] = useState(session.facility ?? '')
+  const [date, setDate] = useState(session.session_date)
+  const [startTime, setStartTime] = useState(session.start_time.slice(0,5))
+  const [endTime, setEndTime] = useState(session.end_time.slice(0,5))
+  const [maxPlayers, setMaxPlayers] = useState(session.max_players)
+  const [description, setDescription] = useState(session.description ?? '')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault(); setError(null)
+    if (startTime >= endTime) { setError('종료 시간이 시작 시간보다 늦어야 합니다'); return }
+    setIsLoading(true)
+    const res = await fetch(`/api/sports/sessions/${session.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sport, title: title.trim()||null, facility: facility||null, session_date: date, start_time: startTime, end_time: endTime, description: description||null, max_players: maxPlayers }),
+    })
+    const j = await res.json()
+    if (!res.ok) { setError(j.error ?? '수정에 실패했습니다'); setIsLoading(false); return }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-900">매칭 수정</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">종목</label>
+            <div className="flex flex-wrap gap-2">
+              {SPORT_OPTS.map(o => (
+                <button key={o.value} type="button" onClick={() => setSport(o.value)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${sport===o.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">제목 <span className="text-gray-400">(선택)</span></label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="예: 풋살 같이해요 (초보환영)" maxLength={50}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">구장/장소 <span className="text-gray-400">(선택)</span></label>
+            <input type="text" value={facility} onChange={e => setFacility(e.target.value)} placeholder="예: 풋살장 A" maxLength={50}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">날짜</label>
+            <input type="date" value={date} min={todayStr()} onChange={e => setDate(e.target.value)} required
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">시작 시간</label>
+              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">종료 시간</label>
+              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} required
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">최대 인원: {maxPlayers}명</label>
+            <input type="range" min={2} max={30} value={maxPlayers} onChange={e => setMaxPlayers(Number(e.target.value))} className="w-full accent-blue-600" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">설명 <span className="text-gray-400">(선택)</span></label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={300} rows={3}
+              placeholder="실력 수준, 모집 조건 등을 적어주세요"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={onDelete}
+              className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+              삭제
+            </button>
+            <button type="submit" disabled={isLoading}
+              className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              {isLoading ? '저장 중...' : '수정 저장'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 /* ─── 체육시설 예약 현황 탭 ─── */
 function ReservationsTab() {
   const [date, setDate] = useState(todayStr())
