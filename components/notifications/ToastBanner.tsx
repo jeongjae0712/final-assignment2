@@ -110,6 +110,7 @@ export default function ToastBanner({ userId }: Props) {
     let chatChannel: ReturnType<typeof supabase.channel> | null = null
     const roomNames = new Map<string, string>()
 
+    const nicknameCache = new Map<string, string>()
     async function subscribeToChats() {
       const { data: memberships } = await supabase
         .from('chat_room_members')
@@ -138,14 +139,25 @@ export default function ToastBanner({ userId }: Props) {
             const msg = payload.new
             if (msg.sender_id === userId) return
             if (!roomIds.has(msg.room_id)) return
-            const preview = msg.content.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content
-            addToast({
-              id: `chat-${msg.id}`,
-              icon: '💬',
-              title: roomNames.get(msg.room_id) ?? '새 메시지',
-              body: preview,
-              link: `/chat/${msg.room_id}`,
-            })
+            ;(async () => {
+              let senderNick: string
+              const cached = nicknameCache.get(msg.sender_id)
+              if (cached) {
+                senderNick = cached
+              } else {
+                const { data } = await supabase.from('users').select('nickname').eq('id', msg.sender_id).single()
+                senderNick = data?.nickname ?? '누군가'
+                nicknameCache.set(msg.sender_id, senderNick)
+              }
+              const preview = msg.content.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content
+              addToast({
+                id: `chat-${msg.id}`,
+                icon: '💬',
+                title: roomNames.get(msg.room_id) ?? '새 메시지',
+                body: `${senderNick}: ${preview}`,
+                link: `/chat/${msg.room_id}`,
+              })
+            })()
           },
         )
         .subscribe()
