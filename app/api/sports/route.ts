@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { Facility } from '@/lib/types/database'
 
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const facility = searchParams.get('facility') as Facility | null
-  const date = searchParams.get('date') // YYYY-MM-DD
+  const date = searchParams.get('date')
   const status = searchParams.get('status') ?? 'available'
 
   let query = supabase
@@ -19,11 +19,13 @@ export async function GET(request: NextRequest) {
     .select('*')
     .order('reservation_date', { ascending: true })
     .order('start_time', { ascending: true })
-    .limit(50)
 
   if (facility) query = query.eq('facility', facility)
   if (date) query = query.eq('reservation_date', date)
   if (status !== 'all') query = query.eq('status', status)
+
+  // date 기준 조회 시 하루 최대 슬롯 수는 ~200개이므로 limit 불필요
+  if (!date) query = (query as any).limit(100)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

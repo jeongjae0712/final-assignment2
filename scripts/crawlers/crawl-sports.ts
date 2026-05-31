@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 충북대 학내체육시설 예약현황 크롤러 (Playwright 기반)
  * URL: https://sports.chungbuk.ac.kr/cbnu_facilities3_2
  * 실행: npx tsx scripts/crawlers/crawl-sports.ts
@@ -28,19 +28,25 @@ if (!SUPABASE_URL || !SERVICE_KEY || !USERNAME || !PASSWORD) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// 시설명 → DB Facility 값 매핑
-const FACILITY_NAME_MAP: Record<string, Facility> = {
-  '풋살구장 A': 'futsal_a', '풋살구장 B': 'futsal_b', '풋살 A': 'futsal_a', '풋살 B': 'futsal_b',
-  '농구장 A': 'basketball_a', '농구장 B': 'basketball_b', '농구 A': 'basketball_a',
-  '테니스장 A': 'tennis_a', '테니스장 B': 'tennis_b', '테니스장 C': 'tennis_c',
-  '테니스장 D': 'tennis_d', '테니스장 E': 'tennis_e',
-  '소운동장': 'small_field', '종합운동장': 'main_field',
-}
-
 function mapFacility(name: string): Facility | null {
-  for (const [key, val] of Object.entries(FACILITY_NAME_MAP)) {
-    if (name.includes(key) || key.includes(name.trim())) return val
+  const n = name.trim()
+  if (/풋살/.test(n)) {
+    if (/B코트|B\$/i.test(n)) return 'futsal_b'
+    return 'futsal_a'
   }
+  if (/농구/.test(n)) {
+    if (/B코트|B\$/i.test(n)) return 'basketball_b'
+    return 'basketball_a'
+  }
+  if (/테니스/.test(n)) {
+    if (/E코트|E\$/i.test(n)) return 'tennis_e'
+    if (/D코트|D\$/i.test(n)) return 'tennis_d'
+    if (/C코트|C\$/i.test(n)) return 'tennis_c'
+    if (/B코트|B\$/i.test(n)) return 'tennis_b'
+    return 'tennis_a'
+  }
+  if (/소운동장/.test(n)) return 'small_field'
+  if (/종합운동장|주운동장/.test(n)) return 'main_field'
   return null
 }
 
@@ -116,11 +122,11 @@ async function run() {
           const table = li.querySelector('.time_table')
           if (!table) return
 
-          // 날짜 헤더 추출
+          // 날짜 헤더 추출 (텍스트에서 YYYY-MM-DD 파싱)
           const dates: string[] = []
-          table.querySelectorAll('thead th[data-date], thead th span.day').forEach((th) => {
-            const d = th.getAttribute('data-date') ?? th.closest('th')?.getAttribute('data-date')
-            if (d) dates.push(d)
+          table.querySelectorAll('thead th').forEach((th) => {
+            const m = th.textContent?.match(/(\d{4}-\d{2}-\d{2})/)
+            if (m) dates.push(m[1])
           })
 
           // 시간대 추출 (첫 번째 열)

@@ -23,7 +23,7 @@ export async function createClient() {
 
 // 크롤러·서버 전용 Service Role 클라이언트 (클라이언트 노출 금지)
 export function createServiceClient() {
-  const { createClient } = require('@supabase/supabase-js')
+  const { createClient } = require('@supabase/supabase-js') as typeof import('@supabase/supabase-js')
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!,

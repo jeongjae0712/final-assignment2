@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { MatchWithProfiles } from '@/lib/types/database'
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
@@ -154,6 +155,17 @@ export default function MatchCard({
       )}
 
       {/* Action buttons */}
+      {match.status === 'accepted' && (
+        <div className="flex gap-2 pt-1">
+          <Link
+            href={`/chat/${(match as unknown as { chat_room_id?: string }).chat_room_id ?? match.id}`}
+            className="flex-1 rounded-lg bg-green-600 py-2 text-sm font-medium text-white text-center hover:bg-green-700 transition-colors"
+          >
+            채팅하기
+          </Link>
+        </div>
+      )}
+
       {match.status === 'pending' && (
         <div className="flex gap-2 pt-1">
           {direction === 'received' && (
