@@ -84,6 +84,33 @@ export interface Contest {
   created_at: string
 }
 
+export interface ContestRecruitment {
+  id: string
+  organizer_id: string
+  contest_id: string
+  title: string
+  description: string | null
+  required_fields: string[] | null
+  max_members: number
+  status: 'open' | 'closed'
+  created_at: string
+  updated_at: string
+  user_applied?: boolean
+  organizer?: { id: string; nickname: string; department: string | null }
+}
+
+export interface ContestApplication {
+  id: string
+  recruitment_id: string
+  applicant_id: string
+  intro: string
+  background: string | null
+  status: 'pending' | 'accepted' | 'rejected'
+  chat_room_id: string | null
+  created_at: string
+  applicant?: { id: string; nickname: string; department: string | null }
+}
+
 export interface SportsReservation {
   id: string
   facility: Facility
@@ -134,7 +161,7 @@ export const FACILITY_MAP: Record<string, { facilities: Facility[]; sportValue: 
   종합운동장: { facilities: ['main_field'], sportValue: '종합운동장' },
 }
 
-// 공모전 분야 탭 레이블 ↔ DB field 값 매핑
+// 공모전 분야 탭 레이블 ↔ DB field 값 매핑 (한국어 → ContestField)
 export const CONTEST_FIELD_MAP: Record<string, ContestField> = {
   '마케팅·아이디어': 'marketing',
   '영상·UCC·사진': 'video',
@@ -144,3 +171,34 @@ export const CONTEST_FIELD_MAP: Record<string, ContestField> = {
   '예체능·음악·미술': 'arts',
   '학술·창업·논술': 'academic',
 }
+
+// 공모전 분야 (ContestField → 한국어)
+export const CONTEST_FIELD_LABELS: Record<ContestField, string> = {
+  marketing: '마케팅·아이디어',
+  video: '영상·UCC·사진',
+  design: '디자인',
+  literature: '문학·글',
+  it: 'IT·소프트웨어',
+  arts: '예체능·음악·미술',
+  academic: '학술·창업·논술',
+}
+
+// 충북대학교 학과 목록
+export const CBNU_DEPARTMENTS: string[] = [
+  '국어국문학과', '영어영문학과', '독어독문학과', '불어불문학과', '중어중문학과',
+  '철학과', '사학과', '고고미술사학과',
+  '행정학과', '정치외교학과', '경제학과', '사회학과', '심리학과',
+  '경영학부', '회계학과', '무역학과',
+  '수학과', '물리학과', '화학과', '생물학과', '천문우주학과', '지구환경과학과',
+  '컴퓨터공학과', '소프트웨어학과', '정보통신공학과',
+  '전기공학부', '전자공학부', '제어로봇공학과',
+  '기계공학부', '화학공학과', '토목공학부', '건축공학과', '환경공학과',
+  '산림학과', '목재종이과학과', '식물자원학과', '원예학과', '식품공학과',
+  '축산학과', '동물자원학과', '바이오시스템공학과',
+  '의학과', '약학과', '수의학과',
+  '간호학과', '물리치료학과',
+  '교육학과', '윤리교육과', '국어교육과', '영어교육과', '역사교육과',
+  '수학교육과', '과학교육과', '체육교육과',
+  '미술학과', '음악학과',
+  '자유전공학부', '기타',
+]

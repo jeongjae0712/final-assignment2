@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -216,9 +216,9 @@ function ContestRecruitmentModal({
                     )}
                     {r.required_fields && r.required_fields.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {r.required_fields.map((f: ContestField) => (
+                        {r.required_fields.map((f) => (
                           <span key={f} className="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
-                            {CONTEST_FIELD_LABELS[f]}
+                            {CONTEST_FIELD_LABELS[f as ContestField]}
                           </span>
                         ))}
                       </div>
@@ -344,7 +344,7 @@ function CreateRecruitmentModal({
               {fieldKeys.map(f => (
                 <button key={f} type="button" onClick={() => toggleField(f)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${requiredFields.includes(f) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                  {CONTEST_FIELD_LABELS[f]}
+                  {CONTEST_FIELD_LABELS[f as ContestField]}
                 </button>
               ))}
             </div>
@@ -618,7 +618,7 @@ function EditRecruitmentModal({
               {fieldKeys.map(f => (
                 <button key={f} type="button" onClick={() => toggleField(f)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${requiredFields.includes(f) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'}`}>
-                  {CONTEST_FIELD_LABELS[f]}
+                  {CONTEST_FIELD_LABELS[f as ContestField]}
                 </button>
               ))}
             </div>
