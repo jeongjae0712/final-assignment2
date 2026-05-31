@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import MatchList from '@/components/matches/MatchList'
+import MatchManagement from '@/components/matches/MatchManagement'
 
 export const metadata = { title: '매칭 관리 | CBNU 매칭' }
 
@@ -12,7 +12,7 @@ export default async function MatchesPage() {
   return (
     <main className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">매칭 관리</h1>
-      <MatchList currentUserId={user.id} />
+      <MatchManagement />
     </main>
   )
 }
