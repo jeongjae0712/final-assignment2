@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import MatchList from '@/components/matches/MatchList'
 
-export const metadata = { title: '매칭 관리 | CBU 매칭' }
+export const metadata = { title: '매칭 관리 | CBNU 매칭' }
 
 export default async function MatchesPage() {
   const supabase = await createClient()

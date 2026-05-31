@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { ContestField } from '@/lib/types/database'
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient()
-  const email = studentId.trim() + '@cbu.internal'
+  const email = studentId.trim() + '@cbnu.internal'
 
   const { data, error } = await supabase.auth.admin.createUser({
     email,

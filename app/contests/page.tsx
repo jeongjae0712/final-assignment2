@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ContestList from '@/components/contests/ContestList'
 
-export const metadata = { title: '공모전 찾기 | CBU 매칭' }
+export const metadata = { title: '공모전 찾기 | CBNU 매칭' }
 
 export default async function ContestsPage() {
   const supabase = await createClient()

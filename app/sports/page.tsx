@@ -1,8 +1,8 @@
-﻿import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SportsList from '@/components/sports/SportsList'
 
-export const metadata = { title: '스포츠 매칭 | CBU 매칭' }
+export const metadata = { title: '스포츠 매칭 | CBNU 매칭' }
 
 export default async function SportsPage() {
   const supabase = await createClient()

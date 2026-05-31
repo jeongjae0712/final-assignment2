@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: '개인정보처리방침 | CBU 매칭',
+  title: '개인정보처리방침 | CBNU 매칭',
 }
 
 export default function PrivacyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       </div>
 
       <Section title="1. 개인정보 수집·이용 목적">
-        <p>CBU 매칭(이하 "서비스")은 충북대학교 재학생을 위한 공모전 팀원 모집 및 스포츠 파트너 매칭 서비스를 제공하기 위하여 최소한의 개인정보를 수집·이용합니다.</p>
+        <p>CBNU 매칭(이하 "서비스")은 충북대학교 재학생을 위한 공모전 팀원 모집 및 스포츠 파트너 매칭 서비스를 제공하기 위하여 최소한의 개인정보를 수집·이용합니다.</p>
         <ul>
           <li>회원가입 및 본인 식별</li>
           <li>공모전 팀원 매칭 서비스 제공</li>

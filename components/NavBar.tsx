@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -20,7 +20,7 @@ export default function NavBar({ userId }: { userId: string }) {
     <>
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-blue-600">CBU 매칭</Link>
+          <Link href="/" className="text-lg font-bold text-blue-600">CBNU 매칭</Link>
           <nav className="hidden sm:flex items-center gap-1">
             {NAV_ITEMS.map(item => (
               <Link key={item.href} href={item.href}

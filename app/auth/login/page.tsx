@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError(null)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({
-      email: studentId.trim() + '@cbu.internal',
+      email: studentId.trim() + '@cbnu.internal',
       password,
     })
     if (error) {
@@ -34,7 +34,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">CBU 매칭</h1>
+          <h1 className="text-2xl font-bold text-gray-900">CBNU 매칭</h1>
           <p className="mt-1 text-sm text-gray-500">충북대학교 공모전 · 스포츠 파트너 매칭</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">

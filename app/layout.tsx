@@ -8,7 +8,7 @@ import Footer from '@/components/Footer'
 const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CBU 매칭 | 충북대학교 매칭 플랫폼',
+  title: 'CBNU 매칭 | 충북대학교 매칭 플랫폼',
   description: '충북대학교 공모전 팀원 모집 및 스포츠 파트너 매칭 플랫폼',
 }
 

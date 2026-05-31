@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ProfileForm from '@/components/profile/ProfileForm'
 
-export const metadata = { title: '내 프로필 | CBU 매칭' }
+export const metadata = { title: '내 프로필 | CBNU 매칭' }
 
 export default async function ProfilePage() {
   const supabase = await createClient()

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: '이용약관 | CBU 매칭',
+  title: '이용약관 | CBNU 매칭',
 }
 
 export default function TermsPage() {
@@ -14,12 +14,12 @@ export default function TermsPage() {
       </div>
 
       <Section title="제1조 (목적)">
-        <p>이 약관은 CBU 매칭(이하 "서비스")이 제공하는 충북대학교 공모전·스포츠 매칭 플랫폼 서비스의 이용 조건 및 절차, 회원과 서비스 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+        <p>이 약관은 CBNU 매칭(이하 "서비스")이 제공하는 충북대학교 공모전·스포츠 매칭 플랫폼 서비스의 이용 조건 및 절차, 회원과 서비스 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
       </Section>
 
       <Section title="제2조 (정의)">
         <ul>
-          <li><strong>"서비스"</strong>란 CBU 매칭이 제공하는 웹 애플리케이션 및 관련 제반 서비스를 의미합니다.</li>
+          <li><strong>"서비스"</strong>란 CBNU 매칭이 제공하는 웹 애플리케이션 및 관련 제반 서비스를 의미합니다.</li>
           <li><strong>"회원"</strong>이란 이 약관에 동의하고 서비스를 이용하는 충북대학교 재학생을 의미합니다.</li>
           <li><strong>"매칭"</strong>이란 회원 간 공모전 팀원 모집 또는 스포츠 파트너 연결을 의미합니다.</li>
           <li><strong>"게시물"</strong>이란 회원이 서비스 내에 작성하는 매칭 모집글, 채팅 메시지, 프로필 정보 등을 의미합니다.</li>

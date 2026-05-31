@@ -89,7 +89,7 @@ export default function RegisterPage() {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
     await supabase.auth.signInWithPassword({
-      email: studentId.trim() + '@cbu.internal',
+      email: studentId.trim() + '@cbnu.internal',
       password,
     })
     router.push('/')
@@ -102,7 +102,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-blue-600">CBU 매칭</h1>
+          <h1 className="text-2xl font-bold text-blue-600">CBNU 매칭</h1>
           <p className="mt-1 text-sm text-gray-500">충북대학교 매칭 플랫폼</p>
         </div>
 

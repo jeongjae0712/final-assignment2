@@ -1,9 +1,9 @@
-﻿import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export const metadata = { title: '채팅 | CBU 매칭' }
+export const metadata = { title: '채팅 | CBNU 매칭' }
 
 export default async function ChatListPage() {
   const supabase = await createClient()
