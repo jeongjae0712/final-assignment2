@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -19,6 +19,11 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
   const [count, setCount] = useState(0)
   const roomIdsRef = useRef<Set<string>>(new Set())
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
+  const pathnameRef = useRef(pathname)
+
+  useEffect(() => {
+    pathnameRef.current = pathname
+  }, [pathname])
 
   const fetchCount = useCallback(async () => {
     try {
@@ -30,7 +35,6 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
     } catch { /* ignore */ }
   }, [])
 
-  // 최초 마운트 시 supabase 클라이언트 생성 및 방 목록 로드 (클라이언트 전용)
   useEffect(() => {
     supabaseRef.current = createClient()
     const supabase = supabaseRef.current
@@ -47,14 +51,12 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
     fetchCount()
   }, [userId, fetchCount])
 
-  // /chat 방문 시 카운트 리셋
   useEffect(() => {
     if (pathname.startsWith('/chat')) {
       setTimeout(fetchCount, 600)
     }
   }, [pathname, fetchCount])
 
-  // 실시간 새 메시지 구독
   useEffect(() => {
     if (!supabaseRef.current) return
     const supabase = supabaseRef.current
@@ -68,14 +70,14 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
           const msg = payload.new
           if (msg.sender_id === userId) return
           if (!roomIdsRef.current.has(msg.room_id)) return
-          if (pathname.startsWith('/chat')) return
+          if (pathnameRef.current.startsWith('/chat')) return
           setCount(prev => prev + 1)
         },
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [userId, pathname])
+  }, [userId])
 
   if (count === 0) return null
   return (
