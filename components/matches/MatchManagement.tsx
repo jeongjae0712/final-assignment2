@@ -372,6 +372,15 @@ type SportSessionData = {
   max_players: number; description: string | null; status: string
   team_chat_id: string | null; created_at: string
 }
+type SportSessionApplication = {
+  id: string; status: string; message: string | null; created_at: string; chat_room_id: string | null
+  session: {
+    id: string; sport: string; title: string | null; facility: string | null
+    session_date: string; start_time: string; end_time: string; max_players: number
+    status: string; team_chat_id: string | null
+    organizer: { id: string; nickname: string } | null
+  } | null
+}
 
 function SportSessionCard({ s, onRefresh }: { s: SportSessionData; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
@@ -507,9 +516,48 @@ function SportSessionCard({ s, onRefresh }: { s: SportSessionData; onRefresh: ()
     </>
   )
 }
+function SportApplicationCard({ app, fmtDate, fmt }: { app: SportSessionApplication; fmtDate: (d: string) => string; fmt: (t: string) => string }) {
+  const s = app.session
+  if (!s) return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <p className="text-sm text-gray-400">(삭제된 세션)</p>
+      <Badge status={app.status} />
+    </div>
+  )
+
+  const chatId = app.chat_room_id ?? s.team_chat_id
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{s.sport}</span>
+            {s.facility && <span className="text-xs text-gray-400">{s.facility}</span>}
+          </div>
+          {s.title && <p className="text-sm font-semibold text-gray-900 truncate">{s.title}</p>}
+          <p className="text-xs text-gray-600">{fmtDate(s.session_date)} · {fmt(s.start_time)} ~ {fmt(s.end_time)}</p>
+          {s.organizer && <p className="text-xs text-gray-400">개설자: {s.organizer.nickname}</p>}
+        </div>
+        <Badge status={app.status} />
+      </div>
+      {app.message && <p className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1 italic">"{app.message}"</p>}
+      {app.status === 'accepted' && !chatId && (
+        <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-1.5">개설자가 매치를 확정하면 팀채팅이 개설됩니다</p>
+      )}
+      {app.status === 'accepted' && chatId && (
+        <Link href={`/chat/${chatId}`} className="block w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white text-center hover:bg-green-700 transition-colors">
+          팀채팅 입장
+        </Link>
+      )}
+    </div>
+  )
+}
+
 function SportsTab() {
   const [data, setData] = useState<{
     mySessions: SportSessionData[]
+    mySessionApplications: SportSessionApplication[]
     myMatches: Array<{
       id: string; status: string; message: string | null; created_at: string; chat_room_id: string | null
       requester: { id: string; nickname: string; avatar_url: string | null } | null
@@ -540,56 +588,75 @@ function SportsTab() {
   if (isLoading) return <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
   if (!data) return <div className="py-8 text-center text-sm text-red-500">데이터를 불러올 수 없습니다</div>
 
-  const { mySessions, myMatches, currentUserId } = data
+  const { mySessions, mySessionApplications, myMatches, currentUserId } = data
 
-  function formatTime(t: string) {
+  function fmt(t: string) {
     const h = parseInt(t.split(':')[0], 10)
     return `${h < 12 ? '오전' : '오후'} ${h === 0 ? 12 : h > 12 ? h - 12 : h}:${t.slice(3, 5)}`
   }
-  function formatDate(d: string) {
+  function fmtDate(d: string) {
     return new Date(d + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })
   }
 
   const pendingReceived = myMatches.filter(m => m.status === 'pending' && m.receiver?.id === currentUserId)
   const pendingSent = myMatches.filter(m => m.status === 'pending' && m.requester?.id === currentUserId)
-  const resolved = myMatches.filter(m => m.status !== 'pending')
+  const resolvedMatches = myMatches.filter(m => m.status !== 'pending')
+  const hasPartnerMatches = myMatches.length > 0
 
   return (
     <div className="space-y-8">
       <section>
-        <SectionTitle>내가 만든 세션 ({mySessions.length})</SectionTitle>
-        {mySessions.length === 0 ? <EmptyState text="만든 스포츠 세션이 없습니다" /> : (
+        <SectionTitle>내가 만든 매칭 ({mySessions.length})</SectionTitle>
+        {mySessions.length === 0 ? <EmptyState text="만든 스포츠 매칭이 없습니다" /> : (
           <div className="space-y-3">
             {mySessions.map(s => <SportSessionCard key={s.id} s={s} onRefresh={load} />)}
           </div>
         )}
       </section>
 
-      {pendingReceived.length > 0 && (
-        <section>
-          <SectionTitle>받은 파트너 신청 ({pendingReceived.length})</SectionTitle>
+      <section>
+        <SectionTitle>내가 신청한 매칭 ({mySessionApplications.length})</SectionTitle>
+        {mySessionApplications.length === 0 ? <EmptyState text="신청한 스포츠 매칭이 없습니다" /> : (
           <div className="space-y-3">
-            {pendingReceived.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={formatDate} formatTime={formatTime} />)}
+            {mySessionApplications.map(a => (
+              <SportApplicationCard key={a.id} app={a} fmtDate={fmtDate} fmt={fmt} />
+            ))}
           </div>
-        </section>
+        )}
+      </section>
+
+      {hasPartnerMatches && (
+        <>
+          {pendingReceived.length > 0 && (
+            <section>
+              <SectionTitle>받은 파트너 신청 ({pendingReceived.length})</SectionTitle>
+              <div className="space-y-3">
+                {pendingReceived.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={fmtDate} formatTime={fmt} />)}
+              </div>
+            </section>
+          )}
+          {pendingSent.length > 0 && (
+            <section>
+              <SectionTitle>보낸 파트너 신청 ({pendingSent.length})</SectionTitle>
+              <div className="space-y-3">
+                {pendingSent.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={fmtDate} formatTime={fmt} />)}
+              </div>
+            </section>
+          )}
+          {resolvedMatches.length > 0 && (
+            <section>
+              <SectionTitle>처리된 파트너 신청 ({resolvedMatches.length})</SectionTitle>
+              <div className="space-y-3">
+                {resolvedMatches.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={fmtDate} formatTime={fmt} />)}
+              </div>
+            </section>
+          )}
+        </>
       )}
-      {pendingSent.length > 0 && (
-        <section>
-          <SectionTitle>보낸 파트너 신청 ({pendingSent.length})</SectionTitle>
-          <div className="space-y-3">
-            {pendingSent.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={formatDate} formatTime={formatTime} />)}
-          </div>
-        </section>
+
+      {mySessions.length === 0 && mySessionApplications.length === 0 && !hasPartnerMatches && (
+        <EmptyState text="스포츠 내역이 없습니다" />
       )}
-      {resolved.length > 0 && (
-        <section>
-          <SectionTitle>처리된 파트너 신청 ({resolved.length})</SectionTitle>
-          <div className="space-y-3">
-            {resolved.map(m => <MatchRow key={m.id} match={m} currentUserId={currentUserId} onAction={handleMatchAction} formatDate={formatDate} formatTime={formatTime} />)}
-          </div>
-        </section>
-      )}
-      {myMatches.length === 0 && mySessions.length === 0 && <EmptyState text="스포츠 내역이 없습니다" />}
     </div>
   )
 }

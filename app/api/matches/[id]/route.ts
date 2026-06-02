@@ -43,9 +43,10 @@ export async function PATCH(
   const typeLabel = match.type === 'sports' ? '스포츠' : '공모전'
 
   if (action === 'accept') {
+    const chatType = match.type === 'contest' ? 'contest_team' : 'sports_team'
     const { data: room } = await admin
       .from('chat_rooms')
-      .insert({ type: 'sports_team', name: `${typeLabel} 팀채팅`, ref_id: match.id })
+      .insert({ type: chatType, name: `${typeLabel} 팀채팅`, ref_id: match.id })
       .select('id').single()
 
     if (room) {

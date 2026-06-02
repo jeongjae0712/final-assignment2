@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(
   request: NextRequest,
@@ -42,18 +43,19 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // 개설자에게 알림
+  // 개설자에게 알림 (admin 클라이언트로 RLS 우회)
+  const admin = createAdminClient()
   const { data: applicant } = await supabase
     .from('users')
     .select('nickname')
     .eq('id', user.id)
     .single()
 
-  await supabase.from('notifications').insert({
+  await admin.from('notifications').insert({
     user_id: recruitment.organizer_id,
     type: 'contest_application',
     content: `${applicant?.nickname ?? '누군가'}님이 "${recruitment.title}" 팀원 모집에 신청했습니다.`,
-    link: '/contests',
+    link: '/matches',
   })
 
   return NextResponse.json({ application: data }, { status: 201 })

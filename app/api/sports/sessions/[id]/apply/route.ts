@@ -1,7 +1,7 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-// POST /api/sports/sessions/[id]/apply
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -39,18 +39,19 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // 개설자에게 알림
+  // 개설자에게 알림 (admin 클라이언트로 RLS 우회)
+  const admin = createAdminClient()
   const { data: applicant } = await supabase
     .from('users')
     .select('nickname')
     .eq('id', user.id)
     .single()
 
-  await supabase.from('notifications').insert({
+  await admin.from('notifications').insert({
     user_id: session.organizer_id,
     type: 'sport_application',
     content: `${applicant?.nickname ?? '누군가'}님이 스포츠 세션(${session.sport})에 신청했습니다.`,
-    link: '/sports',
+    link: '/matches',
   })
 
   return NextResponse.json({ application: data }, { status: 201 })
