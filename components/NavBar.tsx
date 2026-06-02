@@ -18,8 +18,8 @@ const NAV_ITEMS = [
 function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
   const [count, setCount] = useState(0)
   const roomIdsRef = useRef<Set<string>>(new Set())
-  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
   const pathnameRef = useRef(pathname)
+  const channelIdRef = useRef(`${userId}-${Math.random().toString(36).slice(2)}`)
 
   useEffect(() => {
     pathnameRef.current = pathname
@@ -36,8 +36,7 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
   }, [])
 
   useEffect(() => {
-    supabaseRef.current = createClient()
-    const supabase = supabaseRef.current
+    const supabase = createClient()
 
     async function loadRooms() {
       const { data } = await supabase
@@ -49,20 +48,9 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
 
     loadRooms()
     fetchCount()
-  }, [userId, fetchCount])
-
-  useEffect(() => {
-    if (pathname.startsWith('/chat')) {
-      setTimeout(fetchCount, 600)
-    }
-  }, [pathname, fetchCount])
-
-  useEffect(() => {
-    if (!supabaseRef.current) return
-    const supabase = supabaseRef.current
 
     const channel = supabase
-      .channel(`nav-chat-unread:${userId}`)
+      .channel(`nav-chat-unread:${channelIdRef.current}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -77,7 +65,13 @@ function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [userId])
+  }, [userId, fetchCount])
+
+  useEffect(() => {
+    if (pathname.startsWith('/chat')) {
+      setTimeout(fetchCount, 600)
+    }
+  }, [pathname, fetchCount])
 
   if (count === 0) return null
   return (
