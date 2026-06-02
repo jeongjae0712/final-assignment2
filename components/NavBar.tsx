@@ -5,65 +5,81 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import NotificationBell from '@/components/notifications/NotificationBell'
-import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js'
 
-interface ChatMsg { id: string; room_id: string; sender_id: string; created_at: string }
+const NAV_ITEMS = [
+  { href: '/', label: '홈', icon: '🏠' },
+  { href: '/contests', label: '공모전', icon: '🏆' },
+  { href: '/sports', label: '스포츠', icon: '⚽' },
+  { href: '/matches', label: '매칭', icon: '🤝' },
+  { href: '/chat', label: '채팅', icon: '💬', badge: true },
+  { href: '/profile', label: '프로필', icon: '👤' },
+]
 
 function ChatBadge({ userId, pathname }: { userId: string; pathname: string }) {
   const [count, setCount] = useState(0)
-  const supabase = createClient()
   const roomIdsRef = useRef<Set<string>>(new Set())
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
 
   const fetchCount = useCallback(async () => {
-    const res = await fetch('/api/chat/unread')
-    if (res.ok) {
-      const d = await res.json()
-      setCount(d.count ?? 0)
-    }
+    try {
+      const res = await fetch('/api/chat/unread')
+      if (res.ok) {
+        const d = await res.json()
+        setCount(d.count ?? 0)
+      }
+    } catch { /* ignore */ }
   }, [])
 
-  // 채팅방 멤버십 로드
+  // 최초 마운트 시 supabase 클라이언트 생성 및 방 목록 로드 (클라이언트 전용)
   useEffect(() => {
+    supabaseRef.current = createClient()
+    const supabase = supabaseRef.current
+
     async function loadRooms() {
       const { data } = await supabase
         .from('chat_room_members')
         .select('room_id')
         .eq('user_id', userId)
-      if (data) roomIdsRef.current = new Set(data.map(m => m.room_id))
+      if (data) roomIdsRef.current = new Set(data.map((m: { room_id: string }) => m.room_id))
     }
+
     loadRooms()
     fetchCount()
-  }, [userId, fetchCount, supabase])
+  }, [userId, fetchCount])
 
   // /chat 방문 시 카운트 리셋
   useEffect(() => {
     if (pathname.startsWith('/chat')) {
-      setTimeout(fetchCount, 500)
+      setTimeout(fetchCount, 600)
     }
   }, [pathname, fetchCount])
 
-  // 실시간 새 메시지 구독 → 카운트 증가
+  // 실시간 새 메시지 구독
   useEffect(() => {
+    if (!supabaseRef.current) return
+    const supabase = supabaseRef.current
+
     const channel = supabase
       .channel(`nav-chat-unread:${userId}`)
-      .on<ChatMsg>(
+      .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        (payload: RealtimePostgresInsertPayload<ChatMsg>) => {
+        (payload: { new: { sender_id: string; room_id: string } }) => {
           const msg = payload.new
           if (msg.sender_id === userId) return
           if (!roomIdsRef.current.has(msg.room_id)) return
           if (pathname.startsWith('/chat')) return
           setCount(prev => prev + 1)
-        }
+        },
       )
       .subscribe()
+
     return () => { supabase.removeChannel(channel) }
-  }, [userId, pathname, supabase])
+  }, [userId, pathname])
 
   if (count === 0) return null
   return (
-    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none pointer-events-none">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -80,15 +96,6 @@ export default function NavBar({ userId }: { userId: string }) {
     await supabase.auth.signOut()
     router.push('/auth/login')
   }
-
-  const NAV_ITEMS = [
-    { href: '/', label: '홈', icon: '🏠' },
-    { href: '/contests', label: '공모전', icon: '🏆' },
-    { href: '/sports', label: '스포츠', icon: '⚽' },
-    { href: '/matches', label: '매칭', icon: '🤝' },
-    { href: '/chat', label: '채팅', icon: '💬', badge: true },
-    { href: '/profile', label: '프로필', icon: '👤' },
-  ]
 
   return (
     <>
