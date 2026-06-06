@@ -17,10 +17,11 @@ export default async function Home() {
     ?? (user.user_metadata?.nickname as string | undefined)
     ?? '사용자'
 
-  const [{ count: pendingMatches }, { count: unreadNotifs }] = await Promise.all([
-    supabase.from('matches').select('*', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('status', 'pending'),
-    supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
-  ])
+  const { count: pendingMatches } = await supabase
+    .from('matches')
+    .select('*', { count: 'exact', head: true })
+    .eq('receiver_id', user.id)
+    .eq('status', 'pending')
 
   const cards = [
     { href: '/contests', icon: '🏆', title: '공모전 찾기', desc: '공모전 탐색 · 팀원 모집' },
@@ -37,21 +38,11 @@ export default async function Home() {
         <p className="text-blue-100 text-sm mt-2">충북대학교 공모전 · 스포츠 매칭 플랫폼</p>
       </div>
 
-      {((pendingMatches ?? 0) > 0 || (unreadNotifs ?? 0) > 0) && (
-        <div className="grid grid-cols-2 gap-3">
-          {(pendingMatches ?? 0) > 0 && (
-            <Link href="/matches" className="bg-orange-50 border border-orange-200 rounded-xl p-4 hover:bg-orange-100 transition-colors">
-              <p className="text-2xl font-bold text-orange-600">{pendingMatches}</p>
-              <p className="text-sm text-orange-700 mt-0.5">받은 매칭 신청</p>
-            </Link>
-          )}
-          {(unreadNotifs ?? 0) > 0 && (
-            <Link href="/matches" className="bg-blue-50 border border-blue-200 rounded-xl p-4 hover:bg-blue-100 transition-colors">
-              <p className="text-2xl font-bold text-blue-600">{unreadNotifs}</p>
-              <p className="text-sm text-blue-700 mt-0.5">읽지 않은 알림</p>
-            </Link>
-          )}
-        </div>
+      {(pendingMatches ?? 0) > 0 && (
+        <Link href="/matches" className="bg-orange-50 border border-orange-200 rounded-xl p-4 hover:bg-orange-100 transition-colors">
+          <p className="text-2xl font-bold text-orange-600">{pendingMatches}</p>
+          <p className="text-sm text-orange-700 mt-0.5">받은 매칭 신청</p>
+        </Link>
       )}
 
       <div className="grid grid-cols-2 gap-4">
