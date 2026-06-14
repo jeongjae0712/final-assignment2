@@ -25,11 +25,11 @@ jobs:
       - name: 의존성 설치
         run: npm ci
 
-      - name: tsx 설치 (TS 스크립트 실행용)
-        run: npm install -g tsx
+      - name: Playwright 브라우저 설치
+        run: npx playwright install chromium --with-deps
 
       - name: 공모전 크롤링 실행
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: tsx scripts/crawlers/crawl-contests.ts
+        run: npx tsx scripts/crawlers/crawl-contests.ts
