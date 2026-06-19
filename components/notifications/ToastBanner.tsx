@@ -1,6 +1,6 @@
-﻿'use client'
+'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Notification } from '@/lib/types/database'
@@ -12,14 +12,6 @@ interface Toast {
   title: string
   body: string
   link?: string | null
-}
-
-interface ChatMessage {
-  id: string
-  room_id: string
-  sender_id: string
-  content: string
-  created_at: string
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -56,7 +48,8 @@ interface Props {
 export default function ToastBanner({ userId }: Props) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const router = useRouter()
-  const supabase = createClient()
+  // 동일 인스턴스 유지 (매 렌더 재구독 방지)
+  const supabase = useMemo(() => createClient(), [])
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const addToast = useCallback((toast: Toast) => {
@@ -77,18 +70,13 @@ export default function ToastBanner({ userId }: Props) {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // Subscribe to notifications
+  // 알림 구독
   useEffect(() => {
     const channel = supabase
       .channel(`toast-notif:${userId}`)
       .on<Notification>(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         (payload: RealtimePostgresInsertPayload<Notification>) => {
           const n = payload.new
           addToast({
@@ -101,73 +89,89 @@ export default function ToastBanner({ userId }: Props) {
         },
       )
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [userId, supabase, addToast])
 
-  // Subscribe to chat messages
+  // 채팅 메시지 구독
   useEffect(() => {
-    let chatChannel: ReturnType<typeof supabase.channel> | null = null
+    // ref로 관리해 subscription 클로저 안에서 최신값 참조
+    const roomIds = new Set<string>()
     const roomNames = new Map<string, string>()
-
     const nicknameCache = new Map<string, string>()
-    async function subscribeToChats() {
-      const { data: memberships } = await supabase
-        .from('chat_room_members')
-        .select('room_id, room:chat_rooms(name)')
-        .eq('user_id', userId)
 
-      if (!memberships || memberships.length === 0) return
-
-      const roomIds = new Set<string>()
-      memberships.forEach((m: { room_id: string; room: Array<{ name: string }> | null }) => {
-        const firstRoom = Array.isArray(m.room) ? m.room[0] : null
-        roomIds.add(m.room_id)
-        roomNames.set(m.room_id, firstRoom?.name ?? '채팅')
+    // 현재 가입된 방 목록 초기 로드
+    supabase
+      .from('chat_room_members')
+      .select('room_id, room:chat_rooms(name)')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        if (!data) return
+        data.forEach((m: { room_id: string; room: { name: string } | { name: string }[] | null }) => {
+          roomIds.add(m.room_id)
+          const roomObj = Array.isArray(m.room) ? m.room[0] : m.room
+          roomNames.set(m.room_id, roomObj?.name ?? '채팅')
+        })
       })
 
-      chatChannel = supabase
-        .channel(`toast-chat:${userId}`)
-        .on<ChatMessage>(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'chat_messages',
-          },
-          (payload: RealtimePostgresInsertPayload<ChatMessage>) => {
-            const msg = payload.new
-            if (msg.sender_id === userId) return
-            if (!roomIds.has(msg.room_id)) return
-            ;(async () => {
-              let senderNick: string
-              const cached = nicknameCache.get(msg.sender_id)
-              if (cached) {
-                senderNick = cached
-              } else {
-                const { data } = await supabase.from('users').select('nickname').eq('id', msg.sender_id).single()
-                senderNick = data?.nickname ?? '누군가'
-                nicknameCache.set(msg.sender_id, senderNick)
-              }
-              const preview = msg.content.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content
-              addToast({
-                id: `chat-${msg.id}`,
-                icon: '💬',
-                title: roomNames.get(msg.room_id) ?? '새 메시지',
-                body: `${senderNick}: ${preview}`,
-                link: `/chat/${msg.room_id}`,
-              })
-            })()
-          },
-        )
-        .subscribe()
-    }
+    // 새 채팅방 멤버십 감지 → roomIds에 동적 추가
+    const memberChannel = supabase
+      .channel(`toast-members:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_room_members',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload: RealtimePostgresInsertPayload<{ room_id: string; user_id: string }>) => {
+          const newRoomId = payload.new.room_id
+          roomIds.add(newRoomId)
+          const { data } = await supabase.from('chat_rooms').select('name').eq('id', newRoomId).single()
+          roomNames.set(newRoomId, data?.name ?? '채팅')
+        },
+      )
+      .subscribe()
 
-    subscribeToChats()
-    return () => { if (chatChannel) supabase.removeChannel(chatChannel) }
+    // 채팅 메시지 수신 → 본인 제외, 내 방의 메시지만 토스트
+    const chatChannel = supabase
+      .channel(`toast-chat:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        async (payload: RealtimePostgresInsertPayload<{
+          id: string; room_id: string; sender_id: string; content: string
+        }>) => {
+          const msg = payload.new
+          if (msg.sender_id === userId) return
+          if (!roomIds.has(msg.room_id)) return
+
+          let senderNick = nicknameCache.get(msg.sender_id)
+          if (!senderNick) {
+            const { data } = await supabase.from('users').select('nickname').eq('id', msg.sender_id).single()
+            senderNick = data?.nickname ?? '누군가'
+            nicknameCache.set(msg.sender_id, senderNick)
+          }
+
+          const preview = msg.content.length > 60 ? msg.content.slice(0, 60) + '…' : msg.content
+          addToast({
+            id: `chat-${msg.id}`,
+            icon: '💬',
+            title: roomNames.get(msg.room_id) ?? '새 메시지',
+            body: `${senderNick}: ${preview}`,
+            link: `/chat/${msg.room_id}`,
+          })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(memberChannel)
+      supabase.removeChannel(chatChannel)
+    }
   }, [userId, supabase, addToast])
 
-  // Cleanup timers on unmount
+  // 언마운트 시 타이머 정리
   useEffect(() => {
     const timers = timersRef.current
     return () => { timers.forEach(t => clearTimeout(t)) }

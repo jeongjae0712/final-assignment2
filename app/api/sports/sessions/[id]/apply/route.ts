@@ -24,6 +24,15 @@ export async function POST(
   if (session.status !== 'open') return NextResponse.json({ error: '마감된 세션입니다' }, { status: 400 })
   if (session.organizer_id === user.id) return NextResponse.json({ error: '본인이 개설한 세션에는 신청할 수 없습니다' }, { status: 400 })
 
+  // applicant_id FK 보장: auth.users에는 있지만 public.users에 없을 수 있음
+  const admin = createAdminClient()
+  await admin.from('users').upsert({
+    id: user.id,
+    email: user.email!,
+    nickname: ((user.user_metadata?.nickname as string | undefined) ?? ('u' + user.id.replace(/-/g, '').slice(0, 9))).slice(0, 10),
+    student_id: (user.user_metadata?.student_id as string | undefined) ?? '',
+  }, { onConflict: 'id', ignoreDuplicates: true })
+
   const { data, error } = await supabase
     .from('sport_session_applications')
     .insert({
@@ -40,7 +49,6 @@ export async function POST(
   }
 
   // 개설자에게 알림 (admin 클라이언트로 RLS 우회)
-  const admin = createAdminClient()
   const { data: applicant } = await supabase
     .from('users')
     .select('nickname')

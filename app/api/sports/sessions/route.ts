@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   await admin.from('users').upsert({
     id: user.id,
     email: user.email!,
-    nickname: (user.user_metadata?.nickname as string | undefined) ?? ('user_' + user.id.slice(0, 8)),
+    nickname: ((user.user_metadata?.nickname as string | undefined) ?? ('u' + user.id.replace(/-/g, '').slice(0, 9))).slice(0, 10),
     student_id: (user.user_metadata?.student_id as string | undefined) ?? '',
   }, { onConflict: 'id', ignoreDuplicates: true })
 

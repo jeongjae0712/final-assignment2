@@ -27,6 +27,15 @@ export async function POST(
   if (recruitment.status !== 'open') return NextResponse.json({ error: '마감된 모집입니다' }, { status: 400 })
   if (recruitment.organizer_id === user.id) return NextResponse.json({ error: '본인이 작성한 모집에는 신청할 수 없습니다' }, { status: 400 })
 
+  // applicant_id FK 보장: public.users 행 없을 경우 보충
+  const admin = createAdminClient()
+  await admin.from('users').upsert({
+    id: user.id,
+    email: user.email!,
+    nickname: ((user.user_metadata?.nickname as string | undefined) ?? ('u' + user.id.replace(/-/g, '').slice(0, 9))).slice(0, 10),
+    student_id: (user.user_metadata?.student_id as string | undefined) ?? '',
+  }, { onConflict: 'id', ignoreDuplicates: true })
+
   const { data, error } = await supabase
     .from('contest_applications')
     .insert({
@@ -44,7 +53,6 @@ export async function POST(
   }
 
   // 개설자에게 알림 (admin 클라이언트로 RLS 우회)
-  const admin = createAdminClient()
   const { data: applicant } = await supabase
     .from('users')
     .select('nickname')
